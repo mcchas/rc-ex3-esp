@@ -72,6 +72,9 @@ The ESP-12 can sit flat against the PCB once sheilded with shrinkwrap.
 
 [<img src="images/rc3-ttl-uart.png" width=50%/>](image.png)
 
+[<img src="images/rc3-regulator-power.png" width=50%/>](image.png)
+
+
 # Setup
 
 Wifi Manager will advertise an AP to connect to when uninitialised. 
