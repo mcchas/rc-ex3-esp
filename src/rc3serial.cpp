@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <rc3serial.h>
 
 void serialFlush(){
   while(Serial.available() > 0) {
@@ -71,6 +72,35 @@ void setMode(uint8_t mode) {
   uint8_t sum = checksum(buf, len);
   Serial.print(sum, HEX);
   Serial.print('\x03');
+}
+
+void setClimate(Settings s) {
+
+  if (s.degrees != 0xff) s.degrees = s.degrees / 5;
+  uint8_t val;
+  switch(s.speed) {
+      case 0xFF: val=0xff;
+      break;
+      case 1: val=0;
+      break;
+      case 2: val=0x01;
+      break;
+      case 3: val=0x02;
+      break;
+      case 4: val=0x06;
+      break;
+      default: val=0x07;
+  }
+  char buf[100];
+
+  uint8_t len = sprintf(buf, "RSSL12FF0001%.2x02%.2x03%.2x04FF0503%.2x06FF0FFF43FF", (s.power), s.mode, val, s.degrees);
+  Serial.print('\x02');
+  Serial.print(buf);
+  uint8_t sum = checksum(buf, len);
+  Serial.print(sum, HEX);
+  Serial.print('\x03');
+
+
 }
 
 void getStatus() {

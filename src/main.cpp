@@ -63,6 +63,13 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
     DynamicJsonBuffer jsonBuffer;
     JsonObject& root = jsonBuffer.parseObject(payload);
 
+    Settings s = {
+        .power = 0xff, 
+        .mode = 0xff,
+        .degrees = 0xff,
+        .speed = 0xff
+    };
+
     if (!root.success()) {
         // JSON parsing failed
         char mbuf[50];
