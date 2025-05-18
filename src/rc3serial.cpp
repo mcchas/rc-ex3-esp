@@ -4,6 +4,7 @@
 void serialFlush(){
   while(Serial.available() > 0) {
     Serial.read();
+    yield();
   }
 }
 
@@ -76,10 +77,10 @@ void setMode(uint8_t mode) {
 
 void setClimate(Settings s) {
 
-  if (s.degrees != 0xff) s.degrees = s.degrees / 5;
+  if (s.degrees != 0xFFFF) s.degrees = s.degrees / 5;
   uint8_t val;
   switch(s.speed) {
-      case 0xFF: val=0xff;
+      case 0xFF: val=0xFF;
       break;
       case 1: val=0;
       break;
@@ -92,8 +93,15 @@ void setClimate(Settings s) {
       default: val=0x07;
   }
   char buf[100];
+  uint8_t len;
 
-  uint8_t len = sprintf(buf, "RSSL12FF0001%.2x02%.2x03%.2x04FF0503%.2x06FF0FFF43FF", (s.power), s.mode, val, s.degrees);
+  if (s.degrees == 0xFFFF) {
+    len = sprintf(buf, "RSSL12FF0001%.2x02%.2x03%.2x04FF05FF06FF0FFF43FF", (s.power), s.mode, val);
+  }
+  else {
+    len = sprintf(buf, "RSSL13FF0001%.2x02%.2x03%.2x04FF0503%.2x06FF0FFF43FF", (s.power), s.mode, val, s.degrees);
+  }
+  
   Serial.print('\x02');
   Serial.print(buf);
   uint8_t sum = checksum(buf, len);
