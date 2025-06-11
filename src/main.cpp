@@ -84,10 +84,6 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
 
     if (root.containsKey("speed")) {
         s.speed = root["speed"];
-        // uint8_t speed = root["speed"];
-        // setFanSpeed(speed);
-        // delay(100);
-        // serialFlush();
     }
 
     if (root.containsKey("mode")) {
@@ -107,31 +103,19 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
         default: imode=0; break;;
         }
         s.mode = imode;
-        // setMode(imode);
-        // delay(100);
-        // serialFlush();
     }
 
     if (root.containsKey("temp")) {
         float temp = atof(root["temp"]);
         temp = temp * 10.0;
-        // setTemp((int)temp);
-        // delay(100);
-        // serialFlush();
         s.degrees = (int)temp;
     }
 
     if (root.containsKey("power")) {
         s.power = root["power"];
-        // uint8_t pwr = root["power"];
-        // setPowerOn(pwr);
-        // delay(100);
-        // serialFlush();
     }
 
     if (!root.containsKey("status")) {
-        // delay(250);
-        // clear UART 
         serialFlush();
     }
 
