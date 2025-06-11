@@ -133,6 +133,9 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
         char sbuf[len+1];
         Serial.readBytes(sbuf, len);
         for (uint8_t i=1; i<len; i++) {
+            if (sbuf[i] == '\x02') { // quick hack to avoid corrupting json string
+                sbuf[i]=' '; 
+            }
             if (sbuf[i] == '\x03') { 
                 sbuf[i]='\0';
                 break;
