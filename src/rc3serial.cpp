@@ -101,14 +101,23 @@ void setClimate(Settings s) {
   else {
     len = sprintf(buf, "RSSL13FF0001%.2x02%.2x03%.2x04FF0503%.2x06FF0FFF43FF", (s.power), s.mode, val, s.degrees);
   }
-  
   Serial.print('\x02');
   Serial.print(buf);
   uint8_t sum = checksum(buf, len);
   Serial.print(sum, HEX);
   Serial.print('\x03');
+}
 
+void setOffTimer(uint8_t hours) {
+  if (hours < 1 || hours > 12) return;
 
+  char buf[32];
+  uint8_t len = sprintf(buf, "RSJ802%.2x00", hours);
+  Serial.print('\x02');
+  Serial.print(buf);
+  uint8_t sum = checksum(buf, len);
+  Serial.print(sum, HEX);
+  Serial.print('\x03');
 }
 
 void getStatus() {

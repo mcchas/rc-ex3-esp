@@ -6,6 +6,7 @@ void setFanSpeed(uint8_t speed);
 void setPowerOn(uint8_t state);
 void setTemp(uint16_t degrees);
 void setMode(uint8_t mode);
+void setOffTimer(uint8_t hours);
 void getStatus();
 typedef struct
 {

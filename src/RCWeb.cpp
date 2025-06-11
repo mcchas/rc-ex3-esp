@@ -96,6 +96,13 @@ void RCWeb::configureServer(EspConfig *incfg) {
           serialFlush();
         }
 
+        if (server.hasArg("delayOffHours")) {
+          uint8_t hours = server.arg("delayOffHours").toInt();
+          setOffTimer(hours);
+          delay(100);
+          serialFlush();
+        }
+
         if (!server.hasArg("status")) {
           delay(250);
           // clear UART 
@@ -149,8 +156,12 @@ void RCWeb::configureServer(EspConfig *incfg) {
               case '3': strncpy(smode,"fan\0",4); break;;
               case '0': strncpy(smode,"auto\0",5); break;;
             }  
-
-            server.send(200, "text/json; charset=utf-8", "{\"power\":" + String(pwr) + ",\"mode\":\"" + String(smode) + "\",\"speed\":" + String(sfan) + ",\"temp\":" + String(temp) + String(rem) + ",\"response\":\"" + String(sbuf) + "\"}\n");
+            if (server.hasArg("delayOffHours")) {
+              server.send(200, "text/json; charset=utf-8", "{\"power\":" + String(pwr) + ",\"mode\":\"" + String(smode) + "\",\"speed\":" + String(sfan) + ",\"temp\":" + String(temp) + String(rem) + ",\"delayOffHours\":" + String(server.arg("delayOffHours").toInt()) + ",\"response\":\"" + String(sbuf) + "\"}\n");
+            }
+            else {
+              server.send(200, "text/json; charset=utf-8", "{\"power\":" + String(pwr) + ",\"mode\":\"" + String(smode) + "\",\"speed\":" + String(sfan) + ",\"temp\":" + String(temp) + String(rem) + ",\"response\":\"" + String(sbuf) + "\"}\n");
+            }
           }
           else {
             server.send(200, "text/json; charset=utf-8", "{\"response\":\"" + String(sbuf) + "\"}\n");

@@ -125,6 +125,13 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
         serialFlush();
     }
 
+    if (root.containsKey("delayOffHours")) {
+        uint8_t hours = root["delayOffHours"];
+        setOffTimer(hours);
+        delay(100);
+        serialFlush();
+    }
+
     getStatus();
     delay(200);
 
@@ -177,9 +184,14 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
                 case '3': strncpy(smode,"fan\0",4); break;;
                 case '0': strncpy(smode,"auto\0",5); break;;
             }  
-
-            String buffer = "{\"power\":" + String(pwr) + ",\"mode\":\"" + String(smode) + "\",\"speed\":" + String(sfan) + ",\"temp\":" + String(temp) + String(rem) + ",\"response\":\"" + String(sbuf) + "\"}";
-            mqtt.publish(mbuf, buffer.c_str());
+            if (root.containsKey("delayOffHours")) {
+                String buffer = "{\"power\":" + String(pwr) + ",\"mode\":\"" + String(smode) + "\",\"speed\":" + String(sfan) + ",\"temp\":" + String(temp) + String(rem) + ",\"delayOffHours\":" + String(root["delayOffHours"]) + ",\"response\":\"" + String(sbuf) + "\"}\n";
+                mqtt.publish(mbuf, buffer.c_str());
+            }
+            else {
+                String buffer = "{\"power\":" + String(pwr) + ",\"mode\":\"" + String(smode) + "\",\"speed\":" + String(sfan) + ",\"temp\":" + String(temp) + String(rem) + ",\"response\":\"" + String(sbuf) + "\"}";
+                mqtt.publish(mbuf, buffer.c_str());
+            }
         }
         else {
             String buffer = "{\"response\":\"" + String(sbuf) + "\"}";
