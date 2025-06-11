@@ -23,18 +23,16 @@ Tcpdump was used to monitor the data between the client and the device.
 
 Serial 38400 Baud, 8E1.
 ```
-                         M                  T
-                   P     O     F            E             S
-                   W     D     A            M             U
-                   R     E     N            P             M
-    RSSL 12 FF0001 FF 02 03 03 FF 04FF05 FF 06 FF0FFF43FF FC
-
-    RSSL 11 FF0001 10 02 13 03 12 041005 13 24 06140F11   77
-
-    RSSL 13 FF0001 FF 02 FF 03 FF 04FF05 03 ?? 06FF0FFF43 FF     <- set temp
-
-    RSSL 12 FF0001 FF 02 FF 03 FF 04FF05 FF 06 FF0FFF43FF 25     <- getStatus
-    RSSL 11 FF0001 10 02 13 03 12 041005 13 2C 06140F11   86
+           L                 M                       T
+           E         P       O       F               E                                  S
+           N         W       D       A               M                                  U
+           ?         R       E       N       ?       P                                  M
+    RSSL  12 FF00   01 FF   02 03   03 FF   04 FF   05 FF      06 FF   0F FF   43 FF   FC
+    RSSL  11 FF00   01 10   02 13   03 12   04 10   05 13 24   06 14   0F 11           77
+    RSSL  13 FF00   01 FF   02 FF   03 FF   04 FF   05 03 ??   06 FF   0F FF   43      FF     <- set temp
+    RSSL  12 FF00   01 FF   02 FF   03 FF   04 FF   05 FF      06 FF   0F FF   43 FF   25     <- getStatus
+    RSSL  11 FF00   01 10   02 13   03 12   04 10   05 13 2C   06 14   0F 11           86
+    
 ```
 
 Only the main features were reversed as it covered my requirements, however the remaining features could be added. 

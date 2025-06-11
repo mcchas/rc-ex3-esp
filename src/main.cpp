@@ -66,7 +66,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
     Settings s = {
         .power = 0xff, 
         .mode = 0xff,
-        .degrees = 0xff,
+        .degrees = 0xffff,
         .speed = 0xff
     };
 
@@ -118,7 +118,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
         // setTemp((int)temp);
         // delay(100);
         // serialFlush();
-        s.degrees = temp;
+        s.degrees = (int)temp;
     }
 
     if (root.containsKey("power")) {
@@ -130,10 +130,16 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
     }
 
     if (!root.containsKey("status")) {
-        delay(250);
+        // delay(250);
         // clear UART 
         serialFlush();
-    }   
+    }
+
+    if ((s.speed & s.power & s.mode) != 0xFF && s.degrees != 0xFFFF) {
+        setClimate(s);
+        delay(100);
+        serialFlush();
+    }
 
     getStatus();
     delay(200);
