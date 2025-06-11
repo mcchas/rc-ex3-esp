@@ -32,156 +32,245 @@ void RCWeb::configureServer(EspConfig *incfg) {
 
   port = incfg->port;
 
- server.on("/msg", [this]() {
-
-    int simple = 0;
-    if (server.hasArg("simple")) simple = server.arg("simple").toInt();
-    String signature = server.arg("auth");
-    String epid = server.arg("epid");
-    String mid = server.arg("mid");
-    String timestamp = server.arg("time");
-
-    if (strlen(passcode) != 0 && server.arg("pass") != passcode) {
-        server.send(401, "text/plain", "Unauthorized, invalid passcode");
-    } else {
-
-      if (server.hasArg("reconfigure")) {
-        server.send(200, "text/html", "Reconfigure wifi");
-        reconfigure = 1;
-      }
-
-      String type = server.arg("type");
-
-      if (type == "rcex3") {
-
-        if (server.hasArg("speed")) {
-          uint8_t speed = server.arg("speed").toInt();
-          setFanSpeed(speed);
-          delay(100);
-          serialFlush();
-        }
-
-        if (server.hasArg("mode")) {
-          uint8_t mode = server.arg("mode")[0];
-          switch (mode) {
-            case 'c':
-            case 'C': mode=2; break;;
-            case 'd':
-            case 'D': mode=1; break;;
-            case 'h':
-            case 'H': mode=4; break;;
-            case 'f':
-            case 'F': mode=3; break;;
-            case 'a':
-            case 'A': mode=0; break;;
-            default: mode=0; break;;
-          }  
-          setMode(mode);
-          delay(100);
-          serialFlush();
-        }
-
-        if (server.hasArg("temp")) {
-          float temp = server.arg("temp").toFloat();
-          temp = temp * 10.0;
-          setTemp((int)temp);
-          delay(100);
-          serialFlush();
-        }
-
-        if (server.hasArg("power")) {
-          uint8_t pwr = server.arg("power").toInt();
-          setPowerOn(pwr);
-          delay(100);
-          serialFlush();
-        }
-
-        if (server.hasArg("delayOffHours")) {
-          uint8_t hours = server.arg("delayOffHours").toInt();
-          setOffTimer(hours);
-          delay(100);
-          serialFlush();
-        }
-
-        if (!server.hasArg("status")) {
-          delay(250);
-          // clear UART 
-          serialFlush();
-        }
-
-        getStatus();
-        delay(200);
-
-        if(Serial.available()){
-          size_t len = Serial.available();
-          char sbuf[len+1];
-          Serial.readBytes(sbuf, len);
-          for (uint8_t i=1; i<len; i++) {
-            if (sbuf[i] == '\x03') { 
-              sbuf[i]='\0';
-              break;
-            }
-          }
-          sbuf[len+1]='\0';
-          if (sbuf[6]=='1') {
-            char pwr = sbuf[14];
-            char mode = sbuf[18];
-            char fan = sbuf[22];
-            char tbuf[2];
-            strncpy(tbuf, &sbuf[31], 2);
-            unsigned int number = (int)strtol(tbuf, NULL, 16);
-            unsigned int temp = number * 5;
-            char rem[]=".0\0";
-            if (temp % 10) rem[1]='5';
-            temp = temp / 10;
-
-            char sfan[2];
-            switch(fan) {
-              case '0': sfan[0]='1';
-              break;
-              case '1': sfan[0]='2';
-              break;
-              case '2': sfan[0]='3';
-              break;
-              case '6': sfan[0]='4';
-              break;
-              default: sfan[0]='0';
-            }
-            sfan[1]='\0';
-            char smode[6];
-            switch (mode) {
-              case '2': strncpy(smode,"cool\0",5); break;;
-              case '1': strncpy(smode,"dry\0",4); break;;
-              case '4': strncpy(smode,"heat\0",5); break;;
-              case '3': strncpy(smode,"fan\0",4); break;;
-              case '0': strncpy(smode,"auto\0",5); break;;
-            }  
-            if (server.hasArg("delayOffHours")) {
-              server.send(200, "text/json; charset=utf-8", "{\"power\":" + String(pwr) + ",\"mode\":\"" + String(smode) + "\",\"speed\":" + String(sfan) + ",\"temp\":" + String(temp) + String(rem) + ",\"delayOffHours\":" + String(server.arg("delayOffHours").toInt()) + ",\"response\":\"" + String(sbuf) + "\"}\n");
-            }
-            else {
-              server.send(200, "text/json; charset=utf-8", "{\"power\":" + String(pwr) + ",\"mode\":\"" + String(smode) + "\",\"speed\":" + String(sfan) + ",\"temp\":" + String(temp) + String(rem) + ",\"response\":\"" + String(sbuf) + "\"}\n");
-            }
-          }
-          else {
-            server.send(200, "text/json; charset=utf-8", "{\"response\":\"" + String(sbuf) + "\"}\n");
-          }
-        }
-
-        return;
-      }
-
-      if (!simple) {
-        sendHomePage("Code Sent", "Success", 1); // 200
-      }
-    }
+  server.on("/reboot", [this]() {
+    server.send(200, "text/html", "<html><head><meta http-equiv=\"refresh\" content=\"10;URL='/'\"/></head><body><h1>Reboot. Refreshing in 10 seconds...</h1></body></html>\n");
+    ESP.restart();
   });
 
+  server.on("/config", HTTP_POST, [this,incfg]() {
+    String message;
+    bool save = false;
+    if (server.hasArg("hostname")) {
+      message = server.arg("hostname");
+      strncpy(incfg->host_name, message.c_str(), message.length());
+      save = true;
+    }
+    if (server.hasArg("mqtt_server")) {
+      message = server.arg("mqtt_server");
+      strncpy(incfg->mqtt_server, message.c_str(), message.length());
+      save = true;
+    }
+    if (server.hasArg("mqtt_topic")) {
+      message = server.arg("mqtt_topic");
+      strncpy(incfg->mqtt_topic, message.c_str(), message.length());
+      save = true;
+    }
+    if (!save) {
+      server.send(404, "text/plain", "not found\n");
+      return;
+    }
+    server.send(200, "text/html", "<html><head><meta http-equiv=\"refresh\" content=\"3;URL='setup'\"/></head><body><h1>Saved. Redirecting in 3 seconds...</h1></body></html>\n");
+    incfg->saveConfig();
+  });
+
+  server.on("/config", HTTP_GET, [this,incfg]() {
+    String content = "{\"hostname\": \"" + String(incfg->host_name) + "\",";
+    content += "\"mqtt_server\": \"" + String(incfg->mqtt_server) + "\",";
+    content += "\"mqtt_topic\": \"" + String(incfg->mqtt_topic) + "\"";
+    server.send(200, "application/json", content);
+  });
+
+  server.on("/config", HTTP_DELETE, [&]() {
+    incfg->resetConfig();
+    server.send(200, "text/plain", "config deleted");
+  });
+
+  server.on("/setup", [this,incfg]() {
+    String content = "<!DOCTYPE html><html><head><title>RC-EX3 ESP Setup</title><style>";
+    content += "div,fieldset,input,select { padding: 7px; font-size: 1em;}";
+    content += "p {margin: 0.5em 0;}";
+    content += "input {width: 100%; box-sizing: border-box; -webkit-box-sizing: border-box; -moz-box-sizing:";
+    content += "border-box; background: #f9f7f7fc; color: #000000;}";
+    content += "body {text-align: left;font-family: verdana,sans-serif;background: #252525;}";
+    content += "button { border: 0; border-radius: 0.3rem; background: #1fa4ec4b; color: #faffff;";
+    content += "line-height: 2.4rem; font-size: 1.2rem; width: 100%; -webkit-transition-duration: 0.4s; transition-duration: 0.4s; cursor: pointer;}";
+    content += "button:hover {background: #0e70a4;}";
+    content += "</style></head><body>";
+    content += "<div style='text-align:left;display:inline-block;color:#eaeaea;min-width:340px;'>";
+    content += "<fieldset>";
+    content += "<form action=\"/config\" method=\"post\">";
+    content += "<label for=\"hostname\">Hostname:</label><br>";
+    content += "<input type=\"text\" id=\"hostname\" name=\"hostname\" value=\"" + String(incfg->host_name) + "\"><br><br>";
+    content += "<label for=\"mqtt_server\">MQTT Server:</label><br>";
+    content += "  <input type=\"text\" id=\"mqtt_server\" name=\"mqtt_server\" value=\"" + String(incfg->mqtt_server) + "\"><br><br>";
+    content += "  <label for=\"mqtt_topic\">MQTT Topic:</label><br>";
+    content += "  <input type=\"text\" id=\"mqtt_topic\" name=\"mqtt_topic\" value=\"" + String(incfg->mqtt_topic) + "\"><br><br>";
+    content += "<button name='save' type='submit'>Save</button>";
+    content += "</form><br>";
+    content += "<form action=\"/reboot\" method=\"post\">";
+    content += "<button>Reboot</button>";
+    content += "</form><br>";
+    content += "<form action=\"/\">";
+    content += "<button>Home</button>";
+    content += "</form>";
+    content += "</fieldset></div></body></html>";
+    server.send(200, "text/html", content);
+  });
 
   server.on("/", [this]() {
-    sendHomePage(); // 200
+
+    String content = "<!doctypehtml><title>Mitsubishi RC-EX3 (" + String(host_name) + ")</title><style>div{padding:5px;font-size:1em}p{margin:.5em 0}body{text-align:left;font-family:verdana,sans-serif;background:#252525}button{border:0;border-radius:.3rem;";
+    content += "background:#1fa4ec4b;color:#faffff;line-height:2.4rem;font-size:1.2rem;width:100%;-webkit-transition-duration:.4s;transition-duration:.4s;cursor:pointer}.red{background:#ec711f4b}button:hover{background";
+    content += ":#0e70a4}.slidecontainer{width:100%}.slider{width:100%;height:25px;outline:0}.slider:hover{opacity:1}</style><div style=text-align:left;display:inline-block;color:#eaeaea;min-width:340px><div style=text-";
+    content += "align:center;color:#eaeaea> <h2>Mitsubishi RC-EX3 (" + String(host_name) + ")</h2> <h4><a href='https://github.com/mcchas/rc-ex3-esp'>rc-ex3-esp</a></h4></div><form action=msg><input type=hidden name=r><input type=hidden name=power value=1 ><button class=poweron>Power On</button></form><p><form action=msg><input type=hidden name=r><input type=hidden name=power ";
+    content += "value=0 ><button class=poweroff>Power Off</button></form><p><br><form action=msg><input type=hidden name=r><input type=hidden name=mode value=cool><button class=cool>Cool</button></form><p><form action=msg><input type=hidden name=r><input type=hidden ";
+    content += "name=mode value=heat><button class=heat>Heat</button></form><p><form action=msg><input type=hidden name=r><input type=hidden name=mode value=fan><button class=fan>Fan</button></form><p><form action=msg><input type=hidden name=r><input type=hidden name=mode ";
+    content += "value=dry><button class=dry>Dry</button></form></p><br><p><div class=slidercontainer>Temperature: <span id=target></span> <input type=range value=21 class=slider id=tempRange max=30 min=16></div><p><form action=msg ";
+    content += "align-text=center method=post><input type=hidden name=temp><button>Set Temperature</button></form><div style=display:block></div><p><p><form action=setup><button>Setup</button></form></div>";
+    content += "<script>var slider = document.getElementById(\"tempRange\");";
+    content += "var output = document.getElementById(\"target\");";
+    content += "output.innerHTML = slider.value;";
+    content += "slider.oninput = function () { output.innerHTML = this.value; };";
+    content += "fetch(\"msg?status=1\")";
+    content += "    .then(response => response.json())";
+    content += "    .then((data) => {";
+    content += "        console.log(data);";
+    content += "        if (data.power == 1) document.getElementsByClassName('poweron')[0].style.backgroundColor = \"grey\";";
+    content += "        else document.getElementsByClassName('poweroff')[0].style.backgroundColor = \"grey\";";
+    content += "        switch (data.mode) {";
+    content += "            case \"cool\": document.getElementsByClassName('cool')[0].style.backgroundColor = \"grey\"; break;";
+    content += "            case \"heat\": document.getElementsByClassName('heat')[0].style.backgroundColor = \"grey\"; break;";
+    content += "            case \"fan\": document.getElementsByClassName('fan')[0].style.backgroundColor = \"grey\"; break;";
+    content += "            case \"dry\": document.getElementsByClassName('dry')[0].style.backgroundColor = \"grey\"; break;";
+    content += "        }";
+    content += "        output.innerHTML = data.temp;";
+    content += "    }).catch(console.error);</script>";
+    server.send(200, "text/html", content);
   });
-  
+
+
+
+  server.on("/msg", [this]() {
+
+    if (server.hasArg("reconfigure")) {
+      server.send(200, "text/html", "Reconfigure wifi");
+      reconfigure = 1;
+    }
+
+    if (server.hasArg("speed")) {
+      uint8_t speed = server.arg("speed").toInt();
+      setFanSpeed(speed);
+      delay(100);
+      serialFlush();
+    }
+
+    if (server.hasArg("mode")) {
+      uint8_t mode = server.arg("mode")[0];
+      switch (mode) {
+        case 'c':
+        case 'C': mode=2; break;;
+        case 'd':
+        case 'D': mode=1; break;;
+        case 'h':
+        case 'H': mode=4; break;;
+        case 'f':
+        case 'F': mode=3; break;;
+        case 'a':
+        case 'A': mode=0; break;;
+        default: mode=0; break;;
+      }  
+      setMode(mode);
+      delay(100);
+      serialFlush();
+    }
+
+    if (server.hasArg("temp")) {
+      float temp = server.arg("temp").toFloat();
+      temp = temp * 10.0;
+      setTemp((int)temp);
+      delay(100);
+      serialFlush();
+    }
+
+    if (server.hasArg("power")) {
+      uint8_t pwr = server.arg("power").toInt();
+      setPowerOn(pwr);
+      delay(100);
+      serialFlush();
+    }
+
+    if (server.hasArg("delayOffHours")) {
+      uint8_t hours = server.arg("delayOffHours").toInt();
+      setOffTimer(hours);
+      delay(100);
+      serialFlush();
+    }
+
+    if (!server.hasArg("status")) {
+      delay(250);
+      // clear UART 
+      serialFlush();
+    }
+
+    if (server.hasArg("r")) {
+      server.send(200, "text/html", "<html><meta http-equiv=\"refresh\" content=\"1; url=/\" /></html>\n");
+    }
+
+
+    getStatus();
+    delay(200);
+
+    if(Serial.available()){
+      size_t len = Serial.available();
+      char sbuf[len+1];
+      Serial.readBytes(sbuf, len);
+      for (uint8_t i=1; i<len; i++) {
+        if (sbuf[i] == '\x02') { // quick hack to avoid corrupting json string
+          sbuf[i]=' '; 
+        }
+        if (sbuf[i] == '\x03') { 
+          sbuf[i]='\0';
+          break;
+        }
+      }
+      sbuf[len+1]='\0';
+      if (sbuf[6]=='1') {
+        char pwr = sbuf[14];
+        char mode = sbuf[18];
+        char fan = sbuf[22];
+        char tbuf[2];
+        strncpy(tbuf, &sbuf[31], 2);
+        unsigned int number = (int)strtol(tbuf, NULL, 16);
+        unsigned int temp = number * 5;
+        char rem[]=".0\0";
+        if (temp % 10) rem[1]='5';
+        temp = temp / 10;
+
+        char sfan[2];
+        switch(fan) {
+          case '0': sfan[0]='1';
+          break;
+          case '1': sfan[0]='2';
+          break;
+          case '2': sfan[0]='3';
+          break;
+          case '6': sfan[0]='4';
+          break;
+          default: sfan[0]='0';
+        }
+        sfan[1]='\0';
+        char smode[6];
+        switch (mode) {
+          case '2': strncpy(smode,"cool\0",5); break;;
+          case '1': strncpy(smode,"dry\0",4); break;;
+          case '4': strncpy(smode,"heat\0",5); break;;
+          case '3': strncpy(smode,"fan\0",4); break;;
+          case '0': strncpy(smode,"auto\0",5); break;;
+        }  
+        if (server.hasArg("delayOffHours")) {
+          server.send(200, "application/json; charset=utf-8", "{\"power\":" + String(pwr) + ",\"mode\":\"" + String(smode) + "\",\"speed\":" + String(sfan) + ",\"temp\":" + String(temp) + String(rem) + ",\"delayOffHours\":" + String(server.arg("delayOffHours").toInt()) + "\"}\n"); // + ",\"response\":\"" + String(sbuf) + "\"}\n");
+        }
+        else {
+          server.send(200, "application/json; charset=utf-8", "{\"power\":" + String(pwr) + ",\"mode\":\"" + String(smode) + "\",\"speed\":" + String(sfan) + ",\"temp\":" + String(temp) + String(rem) + "}\n"); //",\"response\":\"" + String(sbuf) + "\"}\n");
+        }
+      }
+      else {
+        server.send(200, "application/json; charset=utf-8", "{\"response\":\"" + String(sbuf) + "\"}\n");
+      }
+    }
+
+  });
+
   server.begin();
 
 }
@@ -197,64 +286,4 @@ uint8_t RCWeb::handleClient() {
 
 void RCWeb::stop() {
   server.stop();
-}
-
-void RCWeb::sendHeader() {
-  sendHeader(200);
-}
-
-void RCWeb::sendHeader(int httpcode) {
-
-  server.setContentLength(CONTENT_LENGTH_UNKNOWN);
-  server.send(httpcode, "text/html; charset=utf-8", "");
-  server.sendContent("<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Strict//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd'>\n");
-  server.sendContent("<html xmlns='http://www.w3.org/1999/xhtml' xml:lang='en'>\n");
-  server.sendContent("  <head>\n");
-  server.sendContent("    <meta name='viewport' content='width=device-width, initial-scale=.75' />\n");
-  server.sendContent("    <link rel='stylesheet' href='https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css' />\n");
-  server.sendContent("    <style>@media (max-width: 991px) {.nav-pills>li {float: none; margin-left: 0; margin-top: 5px; text-align: center;}}</style>\n");
-  server.sendContent("    <title>Mitsubishi RC-EX3 (" + String(host_name) + ")</title>\n");
-  server.sendContent("  </head>\n");
-  server.sendContent("  <body>\n");
-  server.sendContent("    <div class='container'>\n");
-  server.sendContent("      <h1><a href='https://github.com/mcchas/rc-ex3-esp'>RC-EX3 ESP</a></h1>\n");
-  server.sendContent("      <div class='row'>\n");
-  server.sendContent("        <div class='col-md-12'>\n");
-  server.sendContent("          <ul class='nav nav-pills'>\n");
-  server.sendContent("            <li class='active'>\n");
-  server.sendContent("              <a href='http://" + String(host_name) + ".local" + ":" + String(port) + "'>Hostname <span class='badge'>" + String(host_name) + ".local" + ":" + String(port) + "</span></a></li>\n");
-  server.sendContent("            <li class='active'>\n");
-  server.sendContent("              <a href='http://" + String(static_ip) + ":" + String(port) + "'>Local <span class='badge'>" + String(static_ip) + ":" + String(port) + "</span></a></li>\n");
-  server.sendContent("            <li class='active'>\n");
-  server.sendContent("              <a href='#'>MAC <span class='badge'>" + String(WiFi.macAddress()) + "</span></a></li>\n");
-  server.sendContent("          </ul>\n");
-  server.sendContent("        </div>\n");
-  server.sendContent("      </div><hr />\n");
-}
-
-void RCWeb::sendFooter() {
-  server.sendContent("      <div class='row'><div class='col-md-12'><em>" + String(millis()) + "ms uptime</em></div></div>\n");
-  server.sendContent("    </div>\n");
-  server.sendContent("  </body>\n");
-  server.sendContent("</html>\n");
-  server.sendContent(""); 
-  delay(5); // give the web browser time to receive the data ...?
-  server.client().stop();
-}
-
-void RCWeb::sendHomePage() {
-  sendHomePage("", "");
-}
-
-void RCWeb::sendHomePage(String message, String header) {
-  sendHomePage(message, header, 0);
-}
-
-void RCWeb::sendHomePage(String message, String header, int type) {
-  sendHomePage(message, header, type, 200);
-}
-
-void RCWeb::sendHomePage(String message, String header, int type, int httpcode) {
-  sendHeader(httpcode);
-  sendFooter();
 }
