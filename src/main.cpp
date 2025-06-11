@@ -63,6 +63,13 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
     DynamicJsonBuffer jsonBuffer;
     JsonObject& root = jsonBuffer.parseObject(payload);
 
+    Settings s = {
+        .power = 0xff, 
+        .mode = 0xff,
+        .degrees = 0xffff,
+        .speed = 0xff
+    };
+
     if (!root.success()) {
         // JSON parsing failed
         char mbuf[50];
@@ -76,10 +83,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
 
 
     if (root.containsKey("speed")) {
-        uint8_t speed = root["speed"];
-        setFanSpeed(speed);
-        delay(100);
-        serialFlush();
+        s.speed = root["speed"];
     }
 
     if (root.containsKey("mode")) {
@@ -97,30 +101,34 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
         case 'a':
         case 'A': imode=0; break;;
         default: imode=0; break;;
-        }  
-        setMode(imode);
-        delay(100);
-        serialFlush();
+        }
+        s.mode = imode;
     }
 
     if (root.containsKey("temp")) {
         float temp = atof(root["temp"]);
         temp = temp * 10.0;
-        setTemp((int)temp);
-        delay(100);
-        serialFlush();
+        s.degrees = (int)temp;
     }
 
     if (root.containsKey("power")) {
-        uint8_t pwr = root["power"];
-        setPowerOn(pwr);
+        s.power = root["power"];
+    }
+
+    if (!root.containsKey("status")) {
+        serialFlush();
+    }
+
+    if ((s.speed & s.power & s.mode) != 0xFF && s.degrees != 0xFFFF) {
+        setClimate(s);
         delay(100);
         serialFlush();
     }
 
-    if (!root.containsKey("status")) {
-        delay(250);
-        // clear UART 
+    if (root.containsKey("delayOffHours")) {
+        uint8_t hours = root["delayOffHours"];
+        setOffTimer(hours);
+        delay(100);
         serialFlush();
     }
 
@@ -132,6 +140,9 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
         char sbuf[len+1];
         Serial.readBytes(sbuf, len);
         for (uint8_t i=1; i<len; i++) {
+            if (sbuf[i] == '\x02') { // quick hack to avoid corrupting json string
+                sbuf[i]=' '; 
+            }
             if (sbuf[i] == '\x03') { 
                 sbuf[i]='\0';
                 break;
@@ -173,9 +184,14 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
                 case '3': strncpy(smode,"fan\0",4); break;;
                 case '0': strncpy(smode,"auto\0",5); break;;
             }  
-
-            String buffer = "{\"power\":" + String(pwr) + ",\"mode\":\"" + String(smode) + "\",\"speed\":" + String(sfan) + ",\"temp\":" + String(temp) + String(rem) + ",\"response\":\"" + String(sbuf) + "\"}";
-            mqtt.publish(mbuf, buffer.c_str());
+            if (root.containsKey("delayOffHours")) {
+                String buffer = "{\"power\":" + String(pwr) + ",\"mode\":\"" + String(smode) + "\",\"speed\":" + String(sfan) + ",\"temp\":" + String(temp) + String(rem) + ",\"delayOffHours\":" + String(root["delayOffHours"]) + ",\"response\":\"" + String(sbuf) + "\"}\n";
+                mqtt.publish(mbuf, buffer.c_str());
+            }
+            else {
+                String buffer = "{\"power\":" + String(pwr) + ",\"mode\":\"" + String(smode) + "\",\"speed\":" + String(sfan) + ",\"temp\":" + String(temp) + String(rem) + ",\"response\":\"" + String(sbuf) + "\"}";
+                mqtt.publish(mbuf, buffer.c_str());
+            }
         }
         else {
             String buffer = "{\"response\":\"" + String(sbuf) + "\"}";
