@@ -14,9 +14,9 @@ This is easy to install without any permanent modifications or soldering to the 
 
 The protocol was reversed from an Mitsubishi application which only runs on Windows XP. 
 
-The program does not appear to be publicly available. I managed to get it from a user on forum (thanks @Jesus-whirlpool) who found it from another user on a Russian forum..
+The program does not appear to be publicly available. I managed to get this from a user on forum which had been passed on from another user on another obscure forum..
 
-The reversing setup used a WinXP virtual machine running the mitsubish application and a USP-over-IP client.
+The reversing setup used a Windows 7 virtual machine running the mitsubish application in XP compatability mode and a USP-over-IP client.
 The Mitsubish pannel was connected to a Raspberry Pi running USPIP.
 Tcpdump was used to monitor the data between the client and the device.
 
@@ -72,6 +72,17 @@ The ESP-12 can sit flat against the PCB once sheilded with shrinkwrap.
 
 [<img src="images/rc3-regulator-power.png" width=50%/>](image.png)
 
+# Updating firmware
+
+After building, use `esptool.py` from a terminal console within platformio:
+
+`python3 espota.py --ip=<ESP8266 IP Address> --host_ip=0.0.0.0 --port=8266 --host_port=8267 --file=./.pio/build/d1_mini/firmware.bin --debug --progres`
+
+# Using the orignal software
+
+This device provides a TCP socket direct to the serial port on the RC-EX3. 
+Using a virtual COM port application (using TCP port 1123) will work with the original tool called PC-Remote (PC-RemoteSetup.exe).
+This is useful for reversing other functions.
 
 # Setup
 
@@ -88,5 +99,6 @@ Set the state with a JSON payload.
     "mode": cool/dry/heat/fan/auto
     "speed": 0/1/2/3/4
     "temp": 16.0-30.0 
+    "delayOffHours": 1-12
 }
 ```
