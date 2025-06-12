@@ -193,7 +193,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
 
             String buffer = "{\"power\":" + String(pwr) + ",\"mode\":\"" + String(smode) + "\",\"speed\":" + String(sfan) + ",\"temp\":" + String(temp) + String(rem) + ",\"response\":\"" + String(sbuf) + "\"";
             if (root.containsKey("delayOffHours")) {
-              buffer += ",\"delayOffHours\":" + String(root["delayOffHours"])  + "\"";
+              buffer += ",\"delayOffHours\":" + String(root["delayOffHours"]);
             }
             buffer += "}\n";
             mqtt.publish(mbuf, buffer.c_str());

@@ -268,7 +268,7 @@ void RCWeb::configureServer(EspConfig *incfg) {
         }
         String content = "{\"power\":" + String(pwr) + ",\"mode\":\"" + String(smode) + "\",\"speed\":" + String(sfan) + ",\"temp\":" + String(temp) + String(rem) + ",\"response\":\"" + String(sbuf) + "\"";
         if (server.hasArg("delayOffHours")) {
-          content += ",\"delayOffHours\":" + String(server.arg("delayOffHours").toInt()) + "\"";
+          content += ",\"delayOffHours\":" + String(server.arg("delayOffHours").toInt());
         }
         content += "}\n";
         server.send(200, "application/json; charset=utf-8", content);
