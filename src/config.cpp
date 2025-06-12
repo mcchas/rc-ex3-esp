@@ -14,10 +14,6 @@ bool EspConfig::saveConfig() {
     DynamicJsonBuffer jsonBuffer;
     JsonObject& json = jsonBuffer.createObject();
     json["hostname"] = host_name;
-    json["passcode"] = passcode;
-    json["port_str"] = port_str;
-    // json["user_id"] = user_id;
-    json["custom_name"] = custom_name;
     json["mqtt_server"] = mqtt_server;
     json["mqtt_topic"] = mqtt_topic;
     #ifdef STATICIP
@@ -81,27 +77,11 @@ bool EspConfig::initEspConfig() {
 
                 if (json.containsKey("hostname")) strncpy(host_name, json["hostname"], HOSTNAME_LEN);
                 else strncpy(host_name, HOSTNAME, HOSTNAME_LEN);
-
-                if (json.containsKey("passcode")) strncpy(passcode, json["passcode"], PASSCODE_LEN);
-                else strncpy(passcode, PASSCODE, PASSCODE_LEN);
-
-                if (json.containsKey("custom_name")) strncpy(custom_name, json["custom_name"], CUSTOM_NAME_LEN);
-                else strncpy(custom_name, CUSTOM_NAME, CUSTOM_NAME_LEN);
-
                 if (json.containsKey("mqtt_server")) strncpy(mqtt_server, json["mqtt_server"], 40);
                 else strncpy(mqtt_server, MQTT_SERVER, 40);
                 if (json.containsKey("mqtt_topic")) strncpy(mqtt_topic, json["mqtt_topic"], 40);
                 else strncpy(mqtt_topic, genTopic().c_str(), 40);
 
-
-                if (json.containsKey("port_str")) {
-                    strncpy(port_str, json["port_str"], 6);
-                    port = atoi(json["port_str"]);
-                }
-                else {
-                    strncpy(port_str, PORT, 6);
-                    port = atoi(PORT);
-                }
                 #ifdef STATICIP
                 if (json.containsKey("ip")) strncpy(static_ip, json["ip"], 16);
                 else strncpy(static_ip, IPADDR, 16);

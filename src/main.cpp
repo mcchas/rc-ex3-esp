@@ -137,32 +137,38 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
 
     if(Serial.available()){
         size_t len = Serial.available();
+        char rbuf[len+1];
+        Serial.readBytes(rbuf, len);
         char sbuf[len+1];
-        Serial.readBytes(sbuf, len);
+        int sbuflen=0;
         for (uint8_t i=1; i<len; i++) {
-            if (sbuf[i] == '\x02') { // quick hack to avoid corrupting json string
-                sbuf[i]=' '; 
+          if (sbuflen) {
+            if ((uint8_t)rbuf[i] > 32 && (uint8_t)rbuf[i] < 127) { // ascii printable
+            sbuf[sbuflen++]=rbuf[i];
             }
-            if (sbuf[i] == '\x03') { 
-                sbuf[i]='\0';
-                break;
+          }
+          else {
+            if (rbuf[i]=='R') {
+              sbuf[sbuflen++]=rbuf[i];
             }
+          }
         }
-        sbuf[len+1]='\0';
+        sbuf[sbuflen]='\0';
         char mbuf[50];
         sprintf(mbuf, "%s/status", cfg.mqtt_topic);
-        if (sbuf[6]=='1') {
-            char pwr = sbuf[14];
-            char mode = sbuf[18];
-            char fan = sbuf[22];
+
+        if (sbuf[4]=='1') {
+            char pwr = sbuf[13];
+            char mode = sbuf[17];
+            char fan = sbuf[21];
             char tbuf[2];
-            strncpy(tbuf, &sbuf[31], 2);
+            strncpy(tbuf, &sbuf[30], 2);
             unsigned int number = (int)strtol(tbuf, NULL, 16);
             unsigned int temp = number * 5;
             char rem[]=".0\0";
             if (temp % 10) rem[1]='5';
-
             temp = temp / 10;
+
             char sfan[2];
             switch(fan) {
                 case '0': sfan[0]='1';
@@ -183,15 +189,14 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
                 case '4': strncpy(smode,"heat\0",5); break;;
                 case '3': strncpy(smode,"fan\0",4); break;;
                 case '0': strncpy(smode,"auto\0",5); break;;
-            }  
+            }
+
+            String buffer = "{\"power\":" + String(pwr) + ",\"mode\":\"" + String(smode) + "\",\"speed\":" + String(sfan) + ",\"temp\":" + String(temp) + String(rem) + ",\"response\":\"" + String(sbuf) + "\"";
             if (root.containsKey("delayOffHours")) {
-                String buffer = "{\"power\":" + String(pwr) + ",\"mode\":\"" + String(smode) + "\",\"speed\":" + String(sfan) + ",\"temp\":" + String(temp) + String(rem) + ",\"delayOffHours\":" + String(root["delayOffHours"]) + ",\"response\":\"" + String(sbuf) + "\"}\n";
-                mqtt.publish(mbuf, buffer.c_str());
+              buffer += ",\"delayOffHours\":" + String(root["delayOffHours"])  + "\"";
             }
-            else {
-                String buffer = "{\"power\":" + String(pwr) + ",\"mode\":\"" + String(smode) + "\",\"speed\":" + String(sfan) + ",\"temp\":" + String(temp) + String(rem) + ",\"response\":\"" + String(sbuf) + "\"}";
-                mqtt.publish(mbuf, buffer.c_str());
-            }
+            buffer += "}\n";
+            mqtt.publish(mbuf, buffer.c_str());
         }
         else {
             String buffer = "{\"response\":\"" + String(sbuf) + "\"}";

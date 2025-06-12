@@ -29,7 +29,7 @@ bool setupWifi(EspConfig *cfg, bool resetConf) {
   if (resetConf)
     wifiManager.resetSettings();
 
-  WiFi.hostname().toCharArray(cfg->host_name, 20);
+  WiFi.setHostname(cfg->host_name);
 
   wifiManager.setAPCallback(configModeCallback);
   wifiManager.setSaveConfigCallback(saveConfigCallback);
@@ -37,18 +37,11 @@ bool setupWifi(EspConfig *cfg, bool resetConf) {
 
   WiFiManagerParameter custom_hostname("hostname", "Choose a hostname for this device", cfg->host_name, HOSTNAME_LEN);
   wifiManager.addParameter(&custom_hostname);
-  WiFiManagerParameter custom_passcode("passcode", "Choose a passcode", cfg->passcode, PASSCODE_LEN);
-  wifiManager.addParameter(&custom_passcode);
-  WiFiManagerParameter custom_port("port_str", "Choose a port", cfg->port_str, 6);
-  wifiManager.addParameter(&custom_port);
+
   WiFiManagerParameter mqtt_server("mqtt_server", "MQTT Server", cfg->mqtt_server, 40);
   wifiManager.addParameter(&mqtt_server);
   WiFiManagerParameter mqtt_topic("mqtt_topic", "MQTT Topic", cfg->mqtt_topic, 40);
   wifiManager.addParameter(&mqtt_topic);
-
-
-  WiFiManagerParameter custom_name("custom_name", "Enter a custom name for this appliance", cfg->custom_name, CUSTOM_NAME_LEN);
-  wifiManager.addParameter(&custom_name);
   
   #ifdef STATICIP
   IPAddress sip, sgw, ssn;
@@ -71,13 +64,8 @@ bool setupWifi(EspConfig *cfg, bool resetConf) {
 
   // connected to WiFi
   strncpy(cfg->host_name, custom_hostname.getValue(), HOSTNAME_LEN);
-  strncpy(cfg->passcode, custom_passcode.getValue(), PASSCODE_LEN);
-  strncpy(cfg->port_str, custom_port.getValue(), 6);
-  strncpy(cfg->custom_name, custom_name.getValue(), CUSTOM_NAME_LEN);
   strncpy(cfg->mqtt_server, mqtt_server.getValue(), 40);
   strncpy(cfg->mqtt_topic, mqtt_topic.getValue(), 40);
-
-  cfg->port = atoi(cfg->port_str);
 
   // Reset device if lost wifi Connection
   WiFi.onStationModeDisconnected(&lostWifiCallback);
