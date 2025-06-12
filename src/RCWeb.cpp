@@ -22,15 +22,11 @@ void RCWeb::configureServer(EspConfig *incfg) {
 
 
   strncpy(host_name, incfg->host_name, 20);
-  strncpy(passcode, incfg->passcode, 20);
-  strncpy(port_str, incfg->port_str, 6);
   strncpy(mqtt_server, incfg->mqtt_server, 40);
   strncpy(mqtt_topic, incfg->mqtt_topic, 40);
   #ifdef STATICIP
   strncpy(static_ip, incfg->static_ip, 16);
   #endif
-
-  port = incfg->port;
 
   server.on("/reboot", [this]() {
     server.send(200, "text/html", "<html><head><meta http-equiv=\"refresh\" content=\"10;URL='/'\"/></head><body><h1>Reboot. Refreshing in 10 seconds...</h1></body></html>\n");
@@ -42,17 +38,18 @@ void RCWeb::configureServer(EspConfig *incfg) {
     bool save = false;
     if (server.hasArg("hostname")) {
       message = server.arg("hostname");
-      strncpy(incfg->host_name, message.c_str(), message.length());
+      snprintf(incfg->host_name, message.length()+1, "%s", message.c_str());
       save = true;
     }
     if (server.hasArg("mqtt_server")) {
       message = server.arg("mqtt_server");
-      strncpy(incfg->mqtt_server, message.c_str(), message.length());
+      snprintf(incfg->mqtt_server, message.length()+1, "%s", message.c_str());
+
       save = true;
     }
     if (server.hasArg("mqtt_topic")) {
       message = server.arg("mqtt_topic");
-      strncpy(incfg->mqtt_topic, message.c_str(), message.length());
+      snprintf(incfg->mqtt_topic, message.length()+1, "%s", message.c_str());
       save = true;
     }
     if (!save) {
@@ -212,24 +209,36 @@ void RCWeb::configureServer(EspConfig *incfg) {
 
     if(Serial.available()){
       size_t len = Serial.available();
+      char rbuf[len+1];
+      Serial.readBytes(rbuf, len);
       char sbuf[len+1];
-      Serial.readBytes(sbuf, len);
+      int sbuflen=0;
       for (uint8_t i=1; i<len; i++) {
-        if (sbuf[i] == '\x02') { // quick hack to avoid corrupting json string
-          sbuf[i]=' '; 
+        if (sbuflen) {
+          if ((uint8_t)rbuf[i] > 32 && (uint8_t)rbuf[i] < 127) { // ascii printable
+          sbuf[sbuflen++]=rbuf[i];
+          }
         }
-        if (sbuf[i] == '\x03') { 
-          sbuf[i]='\0';
-          break;
+        else {
+          if (rbuf[i]=='R') {
+            sbuf[sbuflen++]=rbuf[i];
+          }
         }
       }
-      sbuf[len+1]='\0';
-      if (sbuf[6]=='1') {
-        char pwr = sbuf[14];
-        char mode = sbuf[18];
-        char fan = sbuf[22];
+      sbuf[sbuflen]='\0';
+      // 0123  45 6789   01 23   45 67   89 01   23 45   67 89 01
+      //                         M                       T
+      //       L         P       O       F               E                    S
+      //       E         W       D       A               M                    U
+      //       N         R       E       N       ?       P                    M
+      // RSSL  11 FF00   01 11   02 14   03 10   04 12   05 13 26   06140F10 7A
+      sbuf[sbuflen+1]='\0';
+      if (sbuf[4]=='1') {
+        char pwr = sbuf[13];
+        char mode = sbuf[17];
+        char fan = sbuf[21];
         char tbuf[2];
-        strncpy(tbuf, &sbuf[31], 2);
+        strncpy(tbuf, &sbuf[30], 2);
         unsigned int number = (int)strtol(tbuf, NULL, 16);
         unsigned int temp = number * 5;
         char rem[]=".0\0";
@@ -256,13 +265,13 @@ void RCWeb::configureServer(EspConfig *incfg) {
           case '4': strncpy(smode,"heat\0",5); break;;
           case '3': strncpy(smode,"fan\0",4); break;;
           case '0': strncpy(smode,"auto\0",5); break;;
-        }  
+        }
+        String content = "{\"power\":" + String(pwr) + ",\"mode\":\"" + String(smode) + "\",\"speed\":" + String(sfan) + ",\"temp\":" + String(temp) + String(rem) + ",\"response\":\"" + String(sbuf) + "\"";
         if (server.hasArg("delayOffHours")) {
-          server.send(200, "application/json; charset=utf-8", "{\"power\":" + String(pwr) + ",\"mode\":\"" + String(smode) + "\",\"speed\":" + String(sfan) + ",\"temp\":" + String(temp) + String(rem) + ",\"delayOffHours\":" + String(server.arg("delayOffHours").toInt()) + "\"}\n"); // + ",\"response\":\"" + String(sbuf) + "\"}\n");
+          content += ",\"delayOffHours\":" + String(server.arg("delayOffHours").toInt());
         }
-        else {
-          server.send(200, "application/json; charset=utf-8", "{\"power\":" + String(pwr) + ",\"mode\":\"" + String(smode) + "\",\"speed\":" + String(sfan) + ",\"temp\":" + String(temp) + String(rem) + "}\n"); //",\"response\":\"" + String(sbuf) + "\"}\n");
-        }
+        content += "}\n";
+        server.send(200, "application/json; charset=utf-8", content);
       }
       else {
         server.send(200, "application/json; charset=utf-8", "{\"response\":\"" + String(sbuf) + "\"}\n");
