@@ -2,17 +2,20 @@
 #include <Arduino.h>
 #include <ESP8266WebServer.h>
 #include <ArduinoJson.h>
-#include <RCWeb.h>
+#include <web.h>
 #include <config.h>
 #include <inttypes.h>
 #include <stdlib.h>
-#include <rc3serial.h>
+#include <rc3.h>
 
 ESP8266WebServer server(80);
 DynamicJsonBuffer jsonBuffer;
 JsonObject& deviceState = jsonBuffer.createObject();
 uint8_t reconfigure=0;
 
+uint8_t getDiags=0;
+uint8_t diagCounter=0;
+hvac_data_t hvac_diags;
 
 RCWeb::RCWeb(uint16_t port) {
     // ESP8266WebServer server(port);
@@ -72,6 +75,33 @@ void RCWeb::configureServer(EspConfig *incfg) {
     server.send(200, "text/plain", "config deleted");
   });
 
+  server.on("/diagnostics", [this]() {
+    if (!getDiags) {
+      getDiags = 1;
+      requestOperationalData();
+    }
+    if (getDiags==2) {
+      getDiags = 0;
+      String content = "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><title>Diagnostics</title></head>";
+      content += "<style>body {text-align: left;font-family: verdana, sans-serif;background: #252525}button {border: 0;border-radius: .3rem;background: #1fa4ec4b;";
+      content += "color: #faffff;line-height: 2.4rem;font-size: 1.2rem;width: 100%;-webkit-transition-duration: .4s;transition-duration: .4s;cursor: pointer}";
+      content += "button:hover {background: #0e70a4}</style>";
+      content += "<body><div style=text-align:left;display:inline-block;color:#eaeaea;min-width:340px><h3>Operational Data</h3>";
+      content += "<table border=\"1\" cellpadding=\"4\" cellspacing=\"0\" style=\"width:340px\" >";
+      content += "<tr><td>Indoor Air Temp</td><td>" + String(hvac_diags.indoor_air_temp) + "</td></tr>";
+      content += "<tr><td>Target Temp</td><td>" + String(hvac_diags.target_temp) + "</td></tr>";
+      content += "<tr><td>Outdoor Air Temp</td><td>" + String(hvac_diags.outdoor_air_temp) + "</td></tr>";
+      content += "<tr><td>Outdoor EEV Opening</td><td>" + String(hvac_diags.outdoor_eev_opening) + "</td></tr>";
+      content += "<tr><td>Compressor Hours</td><td>" + String(hvac_diags.compressor_hours) + "</td></tr>";
+      content += "<tr><td>Current</td><td>" + String(hvac_diags.current) + "</td></tr>";
+      content += "</table><br/><form action=\"/\"><button>Home</button></form></fieldset></div></body></html></div></body></html>";
+      server.send(200, "text/html", content);
+      return;
+    }
+    server.send(200, "text/html", "<html><head><meta http-equiv=\"refresh\" content=\"1;URL='/diagnostics?c=" + String(diagCounter++) + "'\"/></head><body><h1>Waiting for diagnostic data. Refreshing in 1 seconds...</h1></body></html>\n");
+  });
+
+
   server.on("/setup", [this,incfg]() {
     String content = "<!DOCTYPE html><html><head><title>RC-EX3 ESP Setup</title><style>";
     content += "div,fieldset,input,select { padding: 7px; font-size: 1em;}";
@@ -96,13 +126,14 @@ void RCWeb::configureServer(EspConfig *incfg) {
     content += "</form><br>";
     content += "<form action=\"/reboot\" method=\"post\">";
     content += "<button>Reboot</button>";
-    content += "</form><br>";
+    content += "</form><br><form action=diagnostics><button>Diagnostics</button></form><br>";
     content += "<form action=\"/\">";
     content += "<button>Home</button>";
     content += "</form>";
     content += "</fieldset></div></body></html>";
     server.send(200, "text/html", content);
   });
+
 
   server.on("/", [this]() {
 
@@ -112,30 +143,18 @@ void RCWeb::configureServer(EspConfig *incfg) {
     content += "align:center;color:#eaeaea> <h2>Mitsubishi RC-EX3 (" + String(host_name) + ")</h2> <h4><a href='https://github.com/mcchas/rc-ex3-esp'>rc-ex3-esp</a></h4></div><form action=msg><input type=hidden name=r><input type=hidden name=power value=1 ><button class=poweron>Power On</button></form><p><form action=msg><input type=hidden name=r><input type=hidden name=power ";
     content += "value=0 ><button class=poweroff>Power Off</button></form><p><br><form action=msg><input type=hidden name=r><input type=hidden name=mode value=cool><button class=cool>Cool</button></form><p><form action=msg><input type=hidden name=r><input type=hidden ";
     content += "name=mode value=heat><button class=heat>Heat</button></form><p><form action=msg><input type=hidden name=r><input type=hidden name=mode value=fan><button class=fan>Fan</button></form><p><form action=msg><input type=hidden name=r><input type=hidden name=mode ";
-    content += "value=dry><button class=dry>Dry</button></form></p><br><p><div class=slidercontainer>Temperature: <span id=target></span> <input type=range value=21 class=slider id=tempRange max=30 min=16></div><p><form action=msg ";
-    content += "align-text=center method=post><input type=hidden name=temp><button>Set Temperature</button></form><div style=display:block></div><p><p><form action=setup><button>Setup</button></form></div>";
-    content += "<script>var slider = document.getElementById(\"tempRange\");";
-    content += "var output = document.getElementById(\"target\");";
-    content += "output.innerHTML = slider.value;";
-    content += "slider.oninput = function () { output.innerHTML = this.value; };";
-    content += "fetch(\"msg?status=1\")";
-    content += "    .then(response => response.json())";
-    content += "    .then((data) => {";
-    content += "        console.log(data);";
-    content += "        if (data.power == 1) document.getElementsByClassName('poweron')[0].style.backgroundColor = \"grey\";";
-    content += "        else document.getElementsByClassName('poweroff')[0].style.backgroundColor = \"grey\";";
-    content += "        switch (data.mode) {";
-    content += "            case \"cool\": document.getElementsByClassName('cool')[0].style.backgroundColor = \"grey\"; break;";
-    content += "            case \"heat\": document.getElementsByClassName('heat')[0].style.backgroundColor = \"grey\"; break;";
-    content += "            case \"fan\": document.getElementsByClassName('fan')[0].style.backgroundColor = \"grey\"; break;";
-    content += "            case \"dry\": document.getElementsByClassName('dry')[0].style.backgroundColor = \"grey\"; break;";
-    content += "        }";
-    content += "        output.innerHTML = data.temp;";
-    content += "    }).catch(console.error);</script>";
+    content += "value=dry><button class=dry>Dry</button></form></p><br>";
+    content += "<p><div class=slidercontainer>Temperature: <span id=target></span> <input type=range value=21 class=slider id=tempRange max=30 min=16></div><p><button id=setTempBtn>Set Temperature</button><div style=display:block></div><p>";
+    content += "<p style=\"display:flex;gap:10px\"><label for=fanSpeedSelect style=\"flex-shrink:0;padding-top:8px\">Fan Speed:</label>";
+    content += "<select id=fanSpeedSelect style=\"flex:1\"><option value=0>Auto</option><option value=1>Speed 1</option><option value=2>Speed 2</option><option value=3>Speed 3</option><option value=4>Speed 4</option></select>";
+    content += "<button id=setFanSpeedBtn style=\"flex:1\">Set Fan Speed</button></p><br><p><form action=setup><button>Setup</button></form></div>";
+    content += "<script>var slider=document.getElementById(\"tempRange\"),output=document.getElementById(\"target\");output.innerHTML=slider.value;slider.oninput=function(){output.innerHTML=this.value};document.getElementById(\"setTempBtn\").addEventListener(\"click\",function(e){e.preventDefault();fetch(\"msg?temp=\"+slider.value).then(response=>response.json()).catch(console.error)});";
+    content += "document.getElementById(\"setFanSpeedBtn\").addEventListener(\"click\",function(e){e.preventDefault();var fanSpeed=document.getElementById(\"fanSpeedSelect\").value;fetch(\"msg?speed=\"+fanSpeed).then(response=>response.json()).catch(console.error)});fetch(\"msg?status=1\").then(response=>response.json()).then(data=>{console.log(data);if(data.power==1)";
+    content += "document.getElementsByClassName(\"poweron\")[0].style.backgroundColor=\"grey\";else document.getElementsByClassName(\"poweroff\")[0].style.backgroundColor=\"grey\";switch(data.mode){case\"cool\":document.getElementsByClassName(\"cool\")[0].style.backgroundColor=\"grey\";break;case\"heat\":document.getElementsByClassName(\"heat\")[0].style.backgroundColor=\"grey\";break";
+    content += ";case\"fan\":document.getElementsByClassName(\"fan\")[0].style.backgroundColor=\"grey\";break;case\"dry\":document.getElementsByClassName(\"dry\")[0].style.backgroundColor=\"grey\";break}document.getElementById(\"fanSpeedSelect\").value=data.speed;output.innerHTML=data.temp}).catch(console.error);</script>";
+
     server.send(200, "text/html", content);
   });
-
-
 
   server.on("/msg", [this]() {
 
@@ -203,80 +222,14 @@ void RCWeb::configureServer(EspConfig *incfg) {
       server.send(200, "text/html", "<html><meta http-equiv=\"refresh\" content=\"1; url=/\" /></html>\n");
     }
 
+    status_string_t status = getStatus();
 
-    getStatus();
-    delay(200);
-
-    if(Serial.available()){
-      size_t len = Serial.available();
-      char rbuf[len+1];
-      Serial.readBytes(rbuf, len);
-      char sbuf[len+1];
-      int sbuflen=0;
-      for (uint8_t i=1; i<len; i++) {
-        if (sbuflen) {
-          if ((uint8_t)rbuf[i] > 32 && (uint8_t)rbuf[i] < 127) { // ascii printable
-          sbuf[sbuflen++]=rbuf[i];
-          }
-        }
-        else {
-          if (rbuf[i]=='R') {
-            sbuf[sbuflen++]=rbuf[i];
-          }
-        }
-      }
-      sbuf[sbuflen]='\0';
-      // 0123  45 6789   01 23   45 67   89 01   23 45   67 89 01
-      //                         M                       T
-      //       L         P       O       F               E                    S
-      //       E         W       D       A               M                    U
-      //       N         R       E       N       ?       P                    M
-      // RSSL  11 FF00   01 11   02 14   03 10   04 12   05 13 26   06140F10 7A
-      sbuf[sbuflen+1]='\0';
-      if (sbuf[4]=='1') {
-        char pwr = sbuf[13];
-        char mode = sbuf[17];
-        char fan = sbuf[21];
-        char tbuf[2];
-        strncpy(tbuf, &sbuf[30], 2);
-        unsigned int number = (int)strtol(tbuf, NULL, 16);
-        unsigned int temp = number * 5;
-        char rem[]=".0\0";
-        if (temp % 10) rem[1]='5';
-        temp = temp / 10;
-
-        char sfan[2];
-        switch(fan) {
-          case '0': sfan[0]='1';
-          break;
-          case '1': sfan[0]='2';
-          break;
-          case '2': sfan[0]='3';
-          break;
-          case '6': sfan[0]='4';
-          break;
-          default: sfan[0]='0';
-        }
-        sfan[1]='\0';
-        char smode[6];
-        switch (mode) {
-          case '2': strncpy(smode,"cool\0",5); break;;
-          case '1': strncpy(smode,"dry\0",4); break;;
-          case '4': strncpy(smode,"heat\0",5); break;;
-          case '3': strncpy(smode,"fan\0",4); break;;
-          case '0': strncpy(smode,"auto\0",5); break;;
-        }
-        String content = "{\"power\":" + String(pwr) + ",\"mode\":\"" + String(smode) + "\",\"speed\":" + String(sfan) + ",\"temp\":" + String(temp) + String(rem) + ",\"response\":\"" + String(sbuf) + "\"";
-        if (server.hasArg("delayOffHours")) {
-          content += ",\"delayOffHours\":" + String(server.arg("delayOffHours").toInt());
-        }
-        content += "}\n";
-        server.send(200, "application/json; charset=utf-8", content);
-      }
-      else {
-        server.send(200, "application/json; charset=utf-8", "{\"response\":\"" + String(sbuf) + "\"}\n");
-      }
+    String content = "{\"power\":" + status.power +",\"mode\":\"" + status.mode + "\",\"speed\":" + String(status.speed) + ",\"temp\":" + String(status.temp);
+    if (server.hasArg("delayOffHours")) {
+      content += ",\"delayOffHours\":" + String(server.arg("delayOffHours").toInt());
     }
+    content += "}\n";
+    server.send(200, "application/json; charset=utf-8", content);
 
   });
 
@@ -285,6 +238,14 @@ void RCWeb::configureServer(EspConfig *incfg) {
 }
 
 uint8_t RCWeb::handleClient() {
+
+  if (getDiags == 1) {
+    uint8_t diag_complete = fetchOperationalData( hvac_diags );
+    if (diag_complete) {
+      getDiags = 2;
+    }
+  }
+
   server.handleClient();
   if (reconfigure) {
     reconfigure=0;

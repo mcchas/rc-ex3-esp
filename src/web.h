@@ -29,4 +29,10 @@ class RCWeb {
         void sendHomePage();
         void sendHomePage(String message, String header);
         void sendHomePage(String message, String header, int type);
+
+        typedef struct {
+            bool reconfigure;
+            bool diagnostics;
+
+        } webResult_t;
 };
