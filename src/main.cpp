@@ -44,7 +44,6 @@ void otaSetup(char *host_name) {
 
 void setup() {
 
-    // EspConfig cfg;
     uint8_t reset = cfg.initEspConfig();
 
     if (!setupWifi(&cfg, reset))

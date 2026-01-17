@@ -16,8 +16,6 @@
 #define GATEWAY "192.168.45.1\0"
 
 #define HTTP_PORT  80
-#define NTP_SERVER "time.google.com"
-#define NTP_OFFSET 36000
 
 
 class EspConfig {
@@ -25,7 +23,6 @@ class EspConfig {
         explicit EspConfig();
 
         const char *wifi_config_name = "Mitsubishi RC-EX3";
-        const char *serverName = "checkip.dyndns.org";
         
         char host_name[20];
         char mqtt_server[40];

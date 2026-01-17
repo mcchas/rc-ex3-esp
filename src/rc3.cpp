@@ -43,7 +43,7 @@ size_t hex_to_bytes(const char *hex, uint8_t *out)
 
 void setFanSpeed(const char* speed)
 {
-  uint8_t ispeed;
+  uint8_t ispeed=0;
   switch (speed[0]) {
   case 'a':
   case 'A': speed=0; break;;
@@ -201,6 +201,55 @@ void setOffTimer(uint8_t hours)
   uint8_t sum = checksum(buf, len);
   Serial.print(sum, HEX);
   Serial.print('\x03');
+}
+
+size_t readSerialAscii(char *buffer, size_t maxLength)
+{
+  char rbuf[maxLength];
+  size_t len = Serial.readBytesUntil('\x03', rbuf, sizeof(rbuf) - 1);
+  int sbuflen = 0;
+  for (uint8_t i = 1; i < len; i++)
+  {
+    if (sbuflen)
+    {
+      if ((uint8_t)rbuf[i] > 32 && (uint8_t)rbuf[i] < 127)
+      {
+        buffer[sbuflen++] = rbuf[i];
+      }
+    }
+    else
+    {
+      if (rbuf[i] == 'R')
+      {
+        buffer[sbuflen++] = rbuf[i];
+      }
+    }
+  }
+  buffer[sbuflen] = '\0';
+  return len;
+}
+
+
+uint8_t getOffTimer()
+{
+  serialFlush();
+  Serial.print('\x02');
+  Serial.print("RSJ928");
+  Serial.print('\x03');
+  delay(100);
+  char buf[50];
+  readSerialAscii(buf, sizeof(buf) - 1);
+  // 0123 4 56 78901
+  // RSJ9 0 20 1004B
+  if (buf[3] == '9' && buf[5] == '2')
+  {
+    char tbuf[5] = {0};
+    strncpy(tbuf, &buf[6], 4);
+    tbuf[2] = '\0';
+    uint8_t timer = (uint8_t)strtol(tbuf, NULL, 16);
+    return timer;
+  }
+  return 0;
 }
 
 void requestOperationalData()

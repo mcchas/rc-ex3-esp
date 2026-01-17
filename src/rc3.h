@@ -29,7 +29,7 @@ void setTemp(uint16_t degrees);
 void setMode(uint8_t mode);
 void setMode(const char* mode);
 void setOffTimer(uint8_t hours);
-// void getStatus();
+uint8_t getOffTimer();
 void requestOperationalData();
 void pollForOperationalData();
 typedef struct
@@ -75,3 +75,4 @@ status_string_t getStatus();
 uint8_t fetchOperationalData(hvac_data_t &hvac);
 String statusJsonString(status_string_t status);
 uint8_t modeToInt(const char* mode);
+size_t readSerialAscii(char* buffer, size_t maxLength);

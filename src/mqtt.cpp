@@ -19,10 +19,9 @@ void processSetClimate(byte* payload) {
     };
 
     if (!root.success()) {
-        // JSON parsing failed
         char mbuf[50];
         sprintf(mbuf, "%s/status", cfg.mqtt_topic);
-        mqtt.publish(mbuf, "parse_fail", false);
+        mqtt.publish(mbuf, "json_parse_fail", false);
         jsonBuffer.clear();
         return;
     } 
@@ -169,6 +168,22 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
             mqtt.publish(mbuf, status.temp.c_str());
         }
 
+
+        else if (topicStr.startsWith(String(cfg.mqtt_topic) + String("/offDelay/"))) {
+            if (topicStr.endsWith("/set")) {
+                payload[length] = '\0';
+                uint8_t hours = atoi((char*)payload);
+                setOffTimer(hours);
+                delay(100);
+            }
+            uint8_t itime = getOffTimer();
+            char stime[4];
+            sprintf(stime, "%u", itime);
+            char mbuf[55];
+            sprintf(mbuf, "%s/offDelay", cfg.mqtt_topic);
+            mqtt.publish(mbuf, String(stime).c_str());
+        }
+
         else if (topicStr.endsWith("/diagnostics")) {
             if (payload[1] == 'n') {
                 getDiagnostics = 1;
@@ -222,7 +237,7 @@ void mqttLoop() {
             getDiagnostics = 2;
             delay(100);
         }
-        // diagnostics();
+
         hvac_data_t hvac;
         uint8_t diag_complete = fetchOperationalData(hvac);
         if (diag_complete) {
