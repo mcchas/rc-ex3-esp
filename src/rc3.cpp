@@ -1,5 +1,4 @@
-#include <Arduino.h>
-#include <rc3.h>
+#include "rc3.h"
 
 void serialFlush()
 {
@@ -20,7 +19,7 @@ uint8_t checksum(char *data, uint16_t length)
   return sum;
 }
 
-size_t hex_to_bytes(const char *hex, uint8_t *out)
+size_t hexToBytes(const char *hex, uint8_t *out)
 {
   size_t count = 0;
   char tmp[3] = {0};
@@ -237,10 +236,9 @@ uint8_t getOffTimer()
   Serial.print("RSJ928");
   Serial.print('\x03');
   delay(100);
+
   char buf[50];
   readSerialAscii(buf, sizeof(buf) - 1);
-  // 0123 4 56 78901
-  // RSJ9 0 20 1004B
   if (buf[3] == '9' && buf[5] == '2')
   {
     char tbuf[5] = {0};
@@ -266,7 +264,7 @@ hvac_data_t parseOperationalData(char *input, uint16_t length)
 
   const char *hex_data = input + HEADER_LEN;
   uint8_t data[256] = {0};
-  hex_to_bytes(hex_data, data);
+  hexToBytes(hex_data, data);
 
   hvac_data_t hvac = {0};
 
@@ -337,31 +335,9 @@ status_string_t getStatus()
   status_string_t status;
 
 
-  char rbuf[256];
-  size_t len = Serial.readBytesUntil('\x03', rbuf, sizeof(rbuf) - 1);
-  char sbuf[len + 1];
-  int sbuflen = 0;
-  for (uint8_t i = 1; i < len; i++)
-  {
-    if (sbuflen)
-    {
-      if ((uint8_t)rbuf[i] > 32 && (uint8_t)rbuf[i] < 127)
-      { // ascii printable
-        sbuf[sbuflen++] = rbuf[i];
-      }
-    }
-    else
-    {
-      if (rbuf[i] == 'R')
-      {
-        sbuf[sbuflen++] = rbuf[i];
-      }
-    }
-  }
-  sbuf[sbuflen] = '\0';
-
+  char sbuf[256];
+  readSerialAscii(sbuf, sizeof(sbuf) - 1);
   
-
   if (sbuf[4] == '1')
   {
     char pwr = sbuf[13];
@@ -431,30 +407,8 @@ status_string_t getStatus()
 
 uint8_t fetchOperationalData(hvac_data_t &hvac)
 {
-
-
-  char rbuf[256];
-  size_t len = Serial.readBytesUntil('\x03', rbuf, sizeof(rbuf) - 1);
-  char sbuf[len + 1];
-  int sbuflen = 0;
-  for (uint8_t i = 1; i < len; i++)
-  {
-    if (sbuflen)
-    {
-      if ((uint8_t)rbuf[i] > 32 && (uint8_t)rbuf[i] < 127)
-      { // ascii printable
-        sbuf[sbuflen++] = rbuf[i];
-      }
-    }
-    else
-    {
-      if (rbuf[i] == 'R')
-      {
-        sbuf[sbuflen++] = rbuf[i];
-      }
-    }
-  }
-  sbuf[sbuflen] = '\0';
+  char sbuf[256];
+  size_t sbuflen = readSerialAscii(sbuf, sizeof(sbuf) - 1);
 
   if (sbuf[2] == 'R' && sbuf[3] == '2')
   {

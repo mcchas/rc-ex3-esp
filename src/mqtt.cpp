@@ -82,9 +82,9 @@ void processSetClimate(byte* payload) {
     status_string_t status = getStatus();
 
     String buffer = "{\"power\":" + status.power + ",\"mode\":\"" + status.mode + "\",\"speed\":" + status.speed + ",\"temp\":" + status.temp;
-    if (root.containsKey("delayOffHours")) {
-        buffer += ",\"delayOffHours\":" + String(root["delayOffHours"]);
-    }
+    // if (root.containsKey("delayOffHours")) {
+    //     buffer += ",\"delayOffHours\":" + String(root["delayOffHours"]);
+    // }
     buffer += "}\n";
 
     char mbuf[50];

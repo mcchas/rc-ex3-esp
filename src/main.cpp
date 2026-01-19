@@ -1,21 +1,13 @@
-#include <Arduino.h>
-#include <ESP8266WiFi.h>
-#include <ESP8266HTTPClient.h>
 #include <ArduinoOTA.h>
-#include <NTPClient.h>
+#include "wifi_mgr.h"
+#include "web.h"
+#include "config.h"
+#include "rc3.h"
+#include "mqtt.h"
+#include "serial_server.h"
 
-#include <wifi.h>
-#include <web.h>
-#include <config.h>
-#include <time.h>
-#include <rc3.h>
-#include <mqtt.h>
-#include <serial_server.h>
-
-WiFiUDP Udp;
 EspConfig cfg;
 RCWeb ws(HTTP_PORT);
-HTTPClient http;
 WiFiServer localServer(1123);
 WiFiClient localClient;
 
@@ -52,7 +44,11 @@ void setup() {
     otaSetup(cfg.host_name);
     ws.configureServer(&cfg);
 
+    #ifdef ESP8266
     Serial.begin(38400,SERIAL_8E1);
+    #elif defined(ESP32)
+    Serial.begin(38400);
+    #endif
 
     localServer.begin();
     localServer.setNoDelay(true);

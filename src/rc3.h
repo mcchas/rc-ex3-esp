@@ -3,7 +3,7 @@
 #define HEADER_LEN 4
 #define POS_OPERATION_MODE        8
 #define POS_INDOOR_AIR_TEMP       9
-#define POS_TARGET_TEMP           7 // 12
+#define POS_TARGET_TEMP           7
 #define POS_PROTECTION_CONTROL    21
 #define POS_OUTDOOR_AIR_TEMP      26
 #define POS_RETURN_AIR_TEMP       27

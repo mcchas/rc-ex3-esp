@@ -1,11 +1,4 @@
-#include <FS.h>
-#include <Arduino.h>
-#include <WiFiManager.h> 
-#include <ArduinoJson.h>
-#include <ESP8266mDNS.h>
-#include <config.h>
-
-
+#include "wifi_mgr.h"
 
 bool shouldSaveConfig = false; 
 
@@ -13,14 +6,21 @@ void saveConfigCallback () {
   shouldSaveConfig = true;
 }
 
+
 void configModeCallback (WiFiManager *myWiFiManager) {
 }
 
+#ifdef ESP8266
 void lostWifiCallback (const WiFiEventStationModeDisconnected& evt) {
   ESP.reset();
   delay(1000);
 }
-
+#elif defined(ESP32)
+void lostWifiCallback(arduino_event_id_t event, arduino_event_info_t info) {
+  ESP.restart();
+  delay(1000);
+}
+#endif
 
 bool setupWifi(EspConfig *cfg, bool resetConf) {
 
@@ -58,7 +58,11 @@ bool setupWifi(EspConfig *cfg, bool resetConf) {
 
   if (!wifiManager.autoConnect(buf)) {
     // failed to connect and hit timeout
+    #ifdef ESP8266
     ESP.reset();
+    #elif defined(ESP32)
+    ESP.restart();
+    #endif
     delay(1000);
   }
 
@@ -68,7 +72,11 @@ bool setupWifi(EspConfig *cfg, bool resetConf) {
   strncpy(cfg->mqtt_topic, mqtt_topic.getValue(), 40);
 
   // Reset device if lost wifi Connection
+  #ifdef ESP8266
   WiFi.onStationModeDisconnected(&lostWifiCallback);
+  #elif defined(ESP32)
+  WiFi.onEvent(lostWifiCallback, ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
+  #endif
 
   // save the custom parameters to FS
   if (shouldSaveConfig) {
