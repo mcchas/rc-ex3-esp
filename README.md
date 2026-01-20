@@ -29,11 +29,11 @@ Use this to set the:
  - MQTT username
  - MQTT password
  
-<img src="https://github.com/user-attachments/assets/2ab8833c-9373-40b0-b1c8-480454f104d8" width="200">
+<img src="https://github.com/user-attachments/assets/2ab8833c-9373-40b0-b1c8-480454f104d8" width="400">
 
 # Web console
 
-<img src="https://github.com/user-attachments/assets/b41dc6d3-d946-41e5-9959-d0eb6f3507f6" width="200">
+<img src="https://github.com/user-attachments/assets/b41dc6d3-d946-41e5-9959-d0eb6f3507f6" width="400">
 
 
 # MQTT
