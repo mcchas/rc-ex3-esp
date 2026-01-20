@@ -34,6 +34,7 @@ bool setupWifi(EspConfig *cfg, bool resetConf) {
   wifiManager.setAPCallback(configModeCallback);
   wifiManager.setSaveConfigCallback(saveConfigCallback);
   wifiManager.setConfigPortalTimeout(180);
+  wifiManager.setConnectTimeout(30);
 
   WiFiManagerParameter custom_hostname("hostname", "Choose a hostname for this device", cfg->host_name, HOSTNAME_LEN);
   wifiManager.addParameter(&custom_hostname);
@@ -42,6 +43,12 @@ bool setupWifi(EspConfig *cfg, bool resetConf) {
   wifiManager.addParameter(&mqtt_server);
   WiFiManagerParameter mqtt_topic("mqtt_topic", "MQTT Topic", cfg->mqtt_topic, 40);
   wifiManager.addParameter(&mqtt_topic);
+
+  WiFiManagerParameter mqtt_user("mqtt_user", "MQTT Username", cfg->mqtt_user, 40);
+  wifiManager.addParameter(&mqtt_user);
+
+  WiFiManagerParameter mqtt_pass("mqtt_pass", "MQTT Password", cfg->mqtt_pass, 40);
+  wifiManager.addParameter(&mqtt_pass);
   
   #ifdef STATICIP
   IPAddress sip, sgw, ssn;
@@ -56,7 +63,11 @@ bool setupWifi(EspConfig *cfg, bool resetConf) {
   char buf[32];
   sprintf(buf, "%s %0x%0x%0x", cfg->wifi_config_name, mac[2], mac[1], mac[0]);
 
+  #ifdef WM_WPA_PASS
+  if (!wifiManager.autoConnect(buf, WM_WPA_PASS)) {
+  #else
   if (!wifiManager.autoConnect(buf)) {
+  #endif
     // failed to connect and hit timeout
     #ifdef ESP8266
     ESP.reset();
@@ -70,6 +81,8 @@ bool setupWifi(EspConfig *cfg, bool resetConf) {
   strncpy(cfg->host_name, custom_hostname.getValue(), HOSTNAME_LEN);
   strncpy(cfg->mqtt_server, mqtt_server.getValue(), 40);
   strncpy(cfg->mqtt_topic, mqtt_topic.getValue(), 40);
+  strncpy(cfg->mqtt_user, mqtt_user.getValue(), 40);
+  strncpy(cfg->mqtt_pass, mqtt_pass.getValue(), 40);
 
   // Reset device if lost wifi Connection
   #ifdef ESP8266

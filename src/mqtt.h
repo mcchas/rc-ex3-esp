@@ -9,6 +9,11 @@
 #elif defined(ESP32)
   #include <WiFi.h>
 #endif
+#ifdef HA_DISCOVERY
+void haDiscovery1();
+void haDiscovery2();
+void haTopics(String topicStr, String payloadStr);
+#endif
 extern uint8_t getDiagnostics;
 extern EspConfig cfg;
 

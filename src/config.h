@@ -4,10 +4,13 @@
 #ifdef ESP8266
 #include <ESP8266WiFi.h>
 #elif defined(ESP32)
-#define USE_LITTLEFS 
+#define USE_LITTLEFS
 #include <WiFi.h>
 #endif
-// #define USE_LITTLEFS // uncomment to use LittleFS on esp8266, otherwise defaults to SPIFFS
+// USE_LITTLEFS: Use LittleFS on esp8266
+// #define USE_LITTLEFS 
+// HA_DISCOVERY: enable Home Assistant MQTT auto-discovery support
+// #define HA_DISCOVERY
 #ifdef USE_LITTLEFS
 #include <LittleFS.h>
 #define FORMAT_LITTLEFS_IF_FAILED true
@@ -15,7 +18,6 @@
 #else
 #define FILESYSTEM SPIFFS
 #endif
-
 #define PROJECT_NAME "Mitsubishi RC-EX3"
 #define VERSION "1.0"
 #define PROJECT_LOCATION "https://github.com/mcchas/rc-ex3-esp.git"
@@ -28,25 +30,29 @@
 #define HTTP_PORT 80
 #define MQTT_USER "rc3user"
 #define MQTT_PASS "pass"
+#define WM_WPA_PASS "configureme"
 
 class EspConfig
 {
 public:
-    explicit EspConfig();
+  explicit EspConfig();
 
-    const char *wifi_config_name = "Mitsubishi RC-EX3";
+  const char *wifi_config_name = "Mitsubishi RC-EX3";
 
-    char host_name[20];
-    char mqtt_server[40];
-    char mqtt_topic[40];
+  char host_name[20];
+  char mqtt_server[40];
+  char mqtt_topic[40];
+  char mqtt_user[40];
+  char mqtt_pass[40];
 
 #ifdef STATICIP
-    char static_ip[16];
-    char static_gw[16];
-    char static_sn[16];
+  char static_ip[16];
+  char static_gw[16];
+  char static_sn[16];
 #endif
 
-    bool initEspConfig();
-    bool resetConfig();
-    bool saveConfig();
+  bool initEspConfig();
+  bool resetConfig();
+  bool saveConfig();
+  void formatFS();
 };

@@ -23,11 +23,11 @@
 void serialFlush();
 uint8_t checksum(char *data, uint16_t length);
 void setFanSpeed(uint8_t speed);
-void setFanSpeed(const char* speed);
+void setFanSpeed(const char *speed);
 void setPowerOn(uint8_t state);
 void setTemp(uint16_t degrees);
 void setMode(uint8_t mode);
-void setMode(const char* mode);
+void setMode(const char *mode);
 void setOffTimer(uint8_t hours);
 uint8_t getOffTimer();
 void requestOperationalData();
@@ -40,7 +40,7 @@ typedef struct
   uint8_t speed;
 } Settings;
 
-typedef struct 
+typedef struct
 {
   String power;
   String mode;
@@ -48,31 +48,31 @@ typedef struct
   String speed;
 } status_string_t;
 
-
 void setClimate(Settings s);
 
-typedef struct {
-    uint8_t operation_mode;
-    int8_t  indoor_air_temp;
-    int8_t  target_temp;
-    int8_t  outdoor_air_temp;
-    int8_t  return_air_temp;
-    int8_t  outdoor_hx_temp1;
-    int8_t  indoor_hx_temp1;
-    int8_t  indoor_hx_temp3;
-    uint8_t defrost;
-    uint8_t indoor_fan_speed;
-    uint8_t compressor_hz;
-    uint8_t outdoor_fan_speed;
-    uint16_t outdoor_eev_opening;
-    uint16_t compressor_hours;
-    int8_t  current;
-    uint8_t protection_control;
+typedef struct
+{
+  uint8_t operation_mode;
+  int8_t indoor_air_temp;
+  int8_t target_temp;
+  int8_t outdoor_air_temp;
+  int8_t return_air_temp;
+  int8_t outdoor_hx_temp1;
+  int8_t indoor_hx_temp1;
+  int8_t indoor_hx_temp3;
+  uint8_t defrost;
+  uint8_t indoor_fan_speed;
+  uint8_t compressor_hz;
+  uint8_t outdoor_fan_speed;
+  uint16_t outdoor_eev_opening;
+  uint16_t compressor_hours;
+  int8_t current;
+  uint8_t protection_control;
 } hvac_data_t;
 
 hvac_data_t parseOperationalData(char *data, uint16_t length);
 status_string_t getStatus();
 uint8_t fetchOperationalData(hvac_data_t &hvac);
 String statusJsonString(status_string_t status);
-uint8_t modeToInt(const char* mode);
-size_t readSerialAscii(char* buffer, size_t maxLength);
+uint8_t modeToInt(const char *mode);
+size_t readSerialAscii(char *buffer, size_t maxLength);
