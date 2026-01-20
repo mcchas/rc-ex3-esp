@@ -19,7 +19,7 @@
 #define FILESYSTEM SPIFFS
 #endif
 #define PROJECT_NAME "Mitsubishi RC-EX3"
-#define VERSION "1.0"
+#define VERSION "2.0.0"
 #define PROJECT_LOCATION "https://github.com/mcchas/rc-ex3-esp.git"
 #define MQTT_SERVER "10.0.0.1"
 #define HOSTNAME "rcex3_\0"
@@ -30,7 +30,7 @@
 #define HTTP_PORT 80
 #define MQTT_USER "rc3user"
 #define MQTT_PASS "pass"
-#define WM_WPA_PASS "configureme"
+// #define WM_WPA_PASS "configureme"
 
 class EspConfig
 {
