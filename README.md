@@ -1,15 +1,14 @@
 # Add Wifi to your Mitsubish RC-EX3 Air Conditioner 
 
-Provides MQTT and HTTP API control of a Mitsubish RC-EX3 air conditioner panel.
+Provides MQTT, web and HTTP API control of a Mitsubish RC-EX3 air conditioner panel.
 
-Also provides a simple web interface to control your HVAC.
-
-I have installed these in three units in my home and they have run flawlessly since Jan 2020 (over 4 years). They integrate with the rest of my bespoke home automation system (using homekit) and could be easily used unmodified, with the popular platforms of today.
+This may also support a number of MHI HVAC controllers with a USB port.
 
 This only requires a few breadboard jumper wires, a 3.3v buck converter and an ESP-12 (ESP826). The ESP-12 is recommended for its small size as it fits easily inside the existing enclosure, however any ESP8266 or ESP32 device could be used (tested on Seeed xiao and ESP Wroom). Linear regulators should be avoided to avoid overdrawing current and producing unwanted heat. A thermocouple is in the enclosure which should be kept away from the new components.
 
 This is easy to install without any permanent modifications or soldering to the unit. This is done by inserting breadboard jumper pins into the through-hole vias on the board. The two components fit easily into the panel, however routing some wires can be easier with minor internal modifications to the plastic enclosure.
 
+I have installed these in three units in my home and they have run flawlessly since Jan 2020 (over 4 years). They integrate with the rest of my bespoke home automation system (using homekit) and could be easily used unmodified, with the popular platforms of today.
 
 # Home Assistant
 
@@ -17,11 +16,6 @@ Due to popular demand, the device advertises itself as a Home Assitant climate e
 
 ![Image](https://github.com/user-attachments/assets/3c2b05ac-55de-4b75-b6f4-3286e0b5d9e6)
 
-# Using the orignal software
-
-This device provides a TCP socket direct to the serial port on the RC-EX3. 
-Using a virtual COM port application (using TCP port 1123) will work with the original tool called PC-Remote (PC-RemoteSetup.exe).
-This is useful for reversing other functions.
 
 # Setup
 
@@ -35,11 +29,12 @@ Use this to set the:
  - MQTT username
  - MQTT password
  
-![Image](https://github.com/user-attachments/assets/2ab8833c-9373-40b0-b1c8-480454f104d8)
+<img src="https://github.com/user-attachments/assets/2ab8833c-9373-40b0-b1c8-480454f104d8" width="200">
 
 # Web console
 
-![Image](https://github.com/user-attachments/assets/b41dc6d3-d946-41e5-9959-d0eb6f3507f6)
+<img src="https://github.com/user-attachments/assets/b41dc6d3-d946-41e5-9959-d0eb6f3507f6" width="200">
+
 
 # MQTT
 
