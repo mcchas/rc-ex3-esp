@@ -28,13 +28,17 @@ Use this to set the:
  - MQTT Server IP
  - MQTT username
  - MQTT password
- 
-<img src="https://github.com/user-attachments/assets/2ab8833c-9373-40b0-b1c8-480454f104d8" width="400">
+
+<img width="382" height="752" alt="Image" src="https://github.com/user-attachments/assets/618e7a5f-f2c6-4114-962d-0127bc3c3dee" />
+
 
 # Web console
 
 <img src="https://github.com/user-attachments/assets/b41dc6d3-d946-41e5-9959-d0eb6f3507f6" width="400">
 
+ # Post initialisation setup via web portal
+ 
+<img src="https://github.com/user-attachments/assets/2ab8833c-9373-40b0-b1c8-480454f104d8" width="400">
 
 # MQTT
 
