@@ -63,6 +63,8 @@ void processSetClimate(byte *payload)
 
   if (((s.speed & s.power & s.mode) != 0xFF) || s.degrees != 0xFFFF)
   {
+    serialFlush();
+    delay(100);
     setClimate(s);
     delay(100);
     serialFlush();
@@ -263,8 +265,6 @@ void haTopics(String topicStr, String payloadStr)
       mqtt.publish(mbuf, "max");
       break;
     }
-
-    mqtt.publish(mbuf, status.speed.c_str());
   }
 }
 #endif
