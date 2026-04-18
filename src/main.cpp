@@ -5,6 +5,8 @@
 #include "rc3.h"
 #include "mqtt.h"
 #include "serial_server.h"
+#include <WebSerialStream.h>
+#include <esp_system.h>
 
 EspConfig cfg;
 RCWeb ws(HTTP_PORT);
@@ -43,12 +45,30 @@ void setup() {
   #endif
   Serial.setTimeout(200);
 
+  WebSerialStream Logger = WebSerialStream();
+  Log.addPrintStream(std::make_shared<WebSerialStream>(Logger));
+  Log.println("Starting " PROJECT_NAME " v" VERSION);
+
   uint8_t cfgOk = cfg.initEspConfig();
   if (!setupWifi(&cfg, !cfgOk))
     return;
 
   otaSetup(cfg.host_name);
+
+  // failsafe for OTA
+  esp_reset_reason_t reason = esp_reset_reason();
+  if (reason != ESP_RST_POWERON) {
+    Log.println("Failsafe: waiting for OTA...");
+    for (int i = 0; i < 10000; i++) {
+      ArduinoOTA.handle();
+      delay(1);
+    }
+  }
+
+
   ws.configureServer(&cfg);
+
+  Log.begin(&ws.server);
 
   localServer.begin();
   localServer.setNoDelay(true);

@@ -33,6 +33,8 @@ public:
   void stop();
   uint8_t handleClient();
 
+  WebServerType server;
+
   void sendHomePage(String message, String header, int type, int httpcode);
   void sendHomePage();
   void sendHomePage(String message, String header);

@@ -1,4 +1,5 @@
 #include "rc3.h"
+#include "TLog.h"
 
 void serialFlush()
 {
@@ -225,6 +226,12 @@ size_t readSerialAscii(char *buffer, size_t maxLength)
     }
   }
   buffer[sbuflen] = '\0';
+
+  // Log the processed readable text for diagnostics
+  if (sbuflen > 0) {
+    Log.println(String("rx: ") + String(buffer));
+  }
+
   return len;
 }
 
