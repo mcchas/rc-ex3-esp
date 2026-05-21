@@ -6,7 +6,6 @@
 #include "mqtt.h"
 #include "serial_server.h"
 #include <WebSerialStream.h>
-#include <esp_system.h>
 
 EspConfig cfg;
 RCWeb ws(HTTP_PORT);
@@ -54,16 +53,6 @@ void setup() {
     return;
 
   otaSetup(cfg.host_name);
-
-  // failsafe for OTA
-  esp_reset_reason_t reason = esp_reset_reason();
-  if (reason != ESP_RST_POWERON) {
-    Log.println("Failsafe: waiting for OTA...");
-    for (int i = 0; i < 10000; i++) {
-      ArduinoOTA.handle();
-      delay(1);
-    }
-  }
 
 
   ws.configureServer(&cfg);
